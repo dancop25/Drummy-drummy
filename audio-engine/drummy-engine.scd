@@ -68,3 +68,6 @@ Tdef(\random, {
     0.3.wait;
   }
 }).play(quant:Quant(1));
+
+
+~buf = Buffer.read(s, Platform.userConfigDir+/+"sounds/1bar-metro.wav");
