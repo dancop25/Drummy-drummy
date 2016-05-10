@@ -71,79 +71,12 @@ Tdef(\random, {
 
 
 
+// audio buffer
 ~buf = Buffer.read(s, ~projectDir +/+ "1bar-metro.wav");
+// trigger data buffer
 ~dataBuf = Buffer.read(s, ~projectDir +/+ "1bar-metro-data.wav");
 
-SynthDef(\combiner, {|audio, data, combined|
-  var phase = Phasor.ar(0, BufRateScale.kr(audio), 0, BufFrames.kr(audio));
-  var sigAudio = BufRd.ar(2, audio, phase);
-  var sigData = BufRd.ar(1, data, phase);
-  var env = EnvGen.ar(Env([1, 0], [BufDur.kr(audio)]), 1, doneAction: 2);
-  var sigs = [sigData, sigData, sigData];
-  env.poll;
-
-  BufWr.ar(sigs, combined, phase, 0);
-}).add;
-
-~triple = Buffer.alloc(s, ~buf.numFrames, 3);
-Synth(\combiner, [\audio, ~buf, \data, ~dataBuf, \combined, ~triple]);
-
-~triple.loadToFloatArray(action: {|arr| ~gogo = arr;
-  ~gogo.select {|x| x > 0}.postln
-});
-
-
-~dataBuf.loadToFloatArray(action: {|arr| ~gogoData = arr; });
-~gogoData.select {|x| x > 0}.size
-
-~data = FloatArray.newClear(~buf.numFrames);
-~data = ~data.collect {|x, i|
-  if(i % ~buf.sampleRate == 0) { 1 } { 0 };
-};
-
-~dataBuf = Buffer.loadCollection(s, ~data, 1, {|buf|
-  var path = "%1bar-metro-data.wav".format(~projectDir);
-  "buffer loaded".postln;
-  buf.write(path, "wav", "int16");
-});
-
-~buf.loadToFloatArray(action: {|arr|
-  ~data = arr;
-  "loaded".postln;
-});
-
-
-
-
-SynthDef(\trigger, {|buf=0, out=0|
-  var phase = Phasor.ar(0, BufRateScale.kr(buf), 0, BufFrames.kr(buf));
-  var sig = BufRd.ar(1, buf, phase);
-  var trig = Trig.ar(sig);
-  SendReply.kr(A2K.kr(trig), '/note', [1]);
-}).add;
-
-~trigger = Synth(\trigger, [\buf, ~buf]);
-~trigger.free;
-
-OSCdef(\trigger, {|msg, time, addr, recvPort|
-  msg.postln;
-}, '/note');
-
-
-
-
-(
-a = [1, 1, 1, 0, 0, 0];
-b = Buffer.alloc(s, 2, 3);
-)
-b = b.sendCollection(a, action: {arg buf; "finished".postln;});
-
-b.loadToFloatArray(action: {|arr|
-  arr.postln;
-});
-
-b.plot
-
+// load buffers to arrays
 ~audioArr = [];
 ~buf.loadToFloatArray(action: {|arr|
   ~audioArr = arr;
@@ -156,9 +89,8 @@ b.plot
   "loaded".postln;
 });
 
-~audioArr.size
-~dataArr.size
-
+// Interleave them into a new buffer, format is
+// audioL, audioR, data...
 ~combined = (~audioArr.size + ~dataArr.size).collect {|i|
   var mod = i % 3;
   var ind = floor(i / 3);
@@ -170,8 +102,12 @@ b.plot
   }
 };
 
+// load interleaved into a buffer
 ~triple = Buffer.loadCollection(s, ~combined, 3, {|buf| "done".postln;});
+// save it as a new file for good use
+~triple.write(~projectDir +/+ "1bar-metro-combined.wav", "wav", "int16");
 
+// SynthDef for playing back audio and data
 SynthDef(\comboPlayer, {|buf=0, out=0|
   var frames = BufFrames.kr(buf);
   var phase = Phasor.ar(0, BufRateScale.kr(buf), 0, frames).poll;
@@ -184,10 +120,9 @@ SynthDef(\comboPlayer, {|buf=0, out=0|
   );
 }).add;
 
+OSCdef(\trigger, {|msg, time, addr, recvPort|
+  msg.postln;
+}, '/note');
+
+
 x.free;x = Synth(\comboPlayer, [\buf, ~triple]);
-
-~triple.duration
-
-~combined.size / 3 / 44100
-~audioArr.size / 2 / 44100
-~dataBuf.size
