@@ -89,14 +89,27 @@ Tdef(\random, {
   "loaded".postln;
 });
 
+~dataArr.select {|x| x > 0}
+
+~vals = [ 1, 2, 3, 4 ];
+
+~valsDataArr = ~dataArr.collect {|x, i|
+  if(x > 0) {
+    ~vals.removeAt(0);
+  } {
+    0
+  }
+};
+
 // Interleave them into a new buffer, format is
 // audioL, audioR, data...
+
 ~combined = (~audioArr.size + ~dataArr.size).collect {|i|
   var mod = i % 3;
   var ind = floor(i / 3);
 
   if(mod == 2) {
-    ~dataArr[ind];
+    ~valsDataArr[ind];
   } {
     ~audioArr[(ind * 2) + mod];
   }
@@ -105,15 +118,20 @@ Tdef(\random, {
 // load interleaved into a buffer
 ~triple = Buffer.loadCollection(s, ~combined, 3, {|buf| "done".postln;});
 // save it as a new file for good use
-~triple.write(~projectDir +/+ "1bar-metro-combined.wav", "wav", "int16");
+~triple.write(~projectDir +/+ "1bar-metro-combined-range.wav", "wav", "int16");
 
+~comboBuf = Buffer.read(s, ~projectDir +/+ "1bar-metro-combined-block.wav");
+
+(
 // SynthDef for playing back audio and data
 SynthDef(\comboPlayer, {|buf=0, out=0|
   var frames = BufFrames.kr(buf);
-  var phase = Phasor.ar(0, BufRateScale.kr(buf), 0, frames).poll;
-  var sig = BufRd.ar(3, buf, phase);
-  var trig = Trig.ar(sig[2]);
-  SendReply.kr(A2K.kr(trig), '/note', [1]);
+  var phase = Phasor.ar(0, BufRateScale.kr(buf), 0, frames);
+  var sig = BufRd.ar(3, buf, phase, interpolation: 1);
+  var val = sig[2] * (2**15);
+  var trig = Trig1.ar(val, 0.1);
+
+  SendReply.kr(A2K.kr(trig), '/note', [val]);
 
   Out.ar(out,
     sig[0..1];
@@ -121,8 +139,30 @@ SynthDef(\comboPlayer, {|buf=0, out=0|
 }).add;
 
 OSCdef(\trigger, {|msg, time, addr, recvPort|
-  msg.postln;
+  var val = msg[3];
+  val.postln;
+  // msg.postln;
 }, '/note');
 
+);
 
-x.free;x = Synth(\comboPlayer, [\buf, ~triple]);
+x.free;x = Synth(\comboPlayer, [\buf, ~comboBuf]);
+
+
+~triple.plot
+
+~sf = SoundFile(~projectDir +/+ "1bar-metro-data.wav")
+~sf.openRead();
+~raw = FloatArray.newClear(~sf.numFrames);
+~sf.readData(~raw);
+~raw.select {|x| x > 0}
+
+(2**16)
+2 / (2**16);
+
+f = File(~projectDir +/+ "1bar-metro-data.wav", "r");
+
+f.pos = 44100;
+f.getInt16LE
+f.pos = 0
+~string = f.readAllString
