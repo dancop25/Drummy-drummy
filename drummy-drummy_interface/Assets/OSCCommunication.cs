@@ -10,7 +10,7 @@ public class OSCCommunication : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 	
-		OSCHandler.Instance.CreateClient("SuperCollider", IPAddress.Parse("127.0.0.1"), 5555);
+		OSCHandler.Instance.CreateClient("SuperCollider", IPAddress.Parse("192.168.18.240"), 5555);
 
 		OSCHandler.Instance.CreateServer("SuperCollider", 6666);
 

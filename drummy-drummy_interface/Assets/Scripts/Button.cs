@@ -14,6 +14,7 @@ public class Button : MonoBehaviour {
 		SetState (true);
 		Debug.Log("pushed");
 		Debug.Log (id);
+		OSCHandler.Instance.SendMessageToClient ("SuperCollider", string.Format ("/button/{0}", id), 1);
 	}
 
 	void OnMouseUp()
