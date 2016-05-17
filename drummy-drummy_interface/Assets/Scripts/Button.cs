@@ -22,7 +22,7 @@ public class Button : MonoBehaviour {
 		SetState (false);
 	}
 
-	void SetState(bool state)
+	public void SetState(bool state)
 	{
 		Sprite sprite;
 
