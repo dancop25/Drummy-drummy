@@ -84,3 +84,61 @@ Tdef(\random, {
     0.3.wait;
   }
 }).play(quant:Quant(1));
+
+
+// Playback
+
+b = Buffer.read(s, ~projectDir +/+ "new-combo.wav");
+
+SynthDef(\player, {|buf=0, rate=60, out=0|
+  var phase = Phasor.ar(0, BufRateScale.kr(buf), 0, BufFrames.kr(buf));
+  var reader = BufRd.ar(3, buf, phase, 0);
+  var audio = reader[0, 1];
+  var trig = Impulse.kr(rate);
+
+  SendReply.kr(trig, '/window', phase.floor);
+
+  Out.ar(out,
+    audio
+  );
+}).add;
+
+~hitData;
+~allData;
+b.loadToFloatArray(action: {|audioArr|
+  ~allData = audioArr;
+  ~hitData = ~allData.select {|x, i| i % 3 == 2};
+});
+
+x = Synth(\player, [\buf, b]);
+x.set(\rate, 60);
+
+
+OSCdef(\window, {|msg, time, addr, recvPort|
+  var startFrame = msg[3].asInteger;
+  var numFrames = (2 * b.sampleRate).asInteger;
+  var endFrame = startFrame + numFrames;
+  var hitData = ~hitData[startFrame..endFrame];
+  hitData.extend(numFrames, 0);
+
+  ~updateDisplay.(hitData);
+}, '/window');
+
+
+~updateDisplay = {|data|
+  {
+    w.drawFunc = {
+      Pen.color = Color.blue(1);
+      Pen.moveTo(0@0);
+      w.bounds.width.do {|x|
+        var i = x.linlin(0, w.bounds.width, 0, data.size).asInteger;
+        var val = data.wrapAt(i);
+        var y = (val * (2**15)).linlin(-30, 30, 0, w.bounds.height);
+        Pen.moveTo(x@0);
+        Pen.lineTo(x@y);
+      };
+      Pen.stroke;
+    };
+    w.refresh;
+  }.fork(AppClock);
+};
