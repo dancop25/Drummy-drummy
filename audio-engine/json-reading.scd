@@ -22,28 +22,35 @@ SynthDef(\time, {|buf=0, t_trig=1, out=0|
 )
 
 (
-~testHit = {|inputTime, threshold = 100|
-	~hits.any {|hit| (hit[1] - inputTime).abs <= threshold }.postln;
-};
+OSCdef(\time, {|msg|
+	~curTime = msg[3];
+}, '/time');
 )
 
 (
-OSCdef(\time, {|msg|
-	var time = msg[3];
-
-	time.postln;
-	if (~testHit.(time)) {
-		"win".postln;
-	} {
-		"fail".postln;
+~curTime = 0;
+Tdef(\clock, {
+	inf.do {|i|
+		x.set(\t_trig, 1);
+		0.016.wait;
 	};
-}, '/time');
+}).play(SystemClock);
 )
 
 x = Synth(\time, [\buf, ~buf]);
 x.set(\t_trig, 1)
 
 (
+~testHit = {|id, button, action, inputTime, threshold = 100|
+	if(action == \down) {
+		~hits.any {|hit| (hit[1] - inputTime).abs <= threshold }.postln;
+	}
+};
+)
+
+
+(
+
 ~inputActionFactory = {| hid |
 	{| value, physValue, rawValue,  arrayValue, usage, page, elid |
 		var button = switch (elid,
@@ -62,11 +69,8 @@ x.set(\t_trig, 1)
 			1, { \down }
 		);
 
-		if (action == \down) {
-			x.set(\t_trig, 1);
-		}
 
-		// ~testHit.(hid.id, button, action);
+		~testHit.(hid.id, button, action, ~curTime);
 	};
 };
 
