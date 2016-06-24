@@ -2,8 +2,8 @@
   "title": "1bar-metro",
   "hits": [
     { "type": 0, "time": 0 },
-    { "type": 0, "time": 1000 },
+    { "type": 1, "time": 1000 },
     { "type": 0, "time": 2000 },
-    { "type": 0, "time": 3000 },
+    { "type": 1, "time": 3000 },
   ]
 }
