@@ -1,0 +1,1 @@
+﻿public enum NoteType {Yellow, Blue}
