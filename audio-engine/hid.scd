@@ -54,4 +54,3 @@ SynthDef(\player, {|buf=0, mul=1, out=0|
 };
 
 ~drummy.action = ~inputActionFactory.(~drummy);
-
